@@ -1,3 +1,5 @@
+
+1)
 JMP main
 JMP isr
 
@@ -28,4 +30,44 @@ MOV SP, 0x0FFF
 MOV A, 1
 OUT 0            ;set keyboard interrupt mask
 STI              ;enable interrupts
+HLT
+
+2)
+JMP main
+JMP isr
+quit: DW 0            ;false 
+
+
+isr:
+PUSH A
+MOVB AL, [0x1000]    ;get current char
+INCB AL
+MOVB [0x1000], AL    ;print new val
+MPPB AL, '9'
+JNE timerdone
+MOV [quit], 1       ;quit, true
+
+
+timerdone:
+MOV A, 2
+OUT 2                    ;timer has been serviced
+POP A
+IRET
+
+main:
+MOV SP, 0x0FFF
+MOV [0x1000], '0'
+MOV A, 5000
+OUT 3               ;preset the timer to 5000 in TMRPRELOAD
+MOV A, 2
+OUT 0               ;set the timer interrupt mask IRQMASK
+STI                 ;enable interrupts  
+
+loop:
+MOV A, [quit]
+CMP A, 1
+JE break
+
+break:
+CLI
 HLT
