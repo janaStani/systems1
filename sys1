@@ -1,0 +1,31 @@
+JMP main
+JMP isr
+
+
+
+isr:
+PUSH A            ;the ISR use A reg
+IN 5              ;get the keyboard status
+AND A, 1        
+CMP A, 1          ;keydown?
+JE printkey
+IN 6              ;get key code
+MOVB [0x1000], 0  ;clear display
+JMP keysdone
+
+printkey:
+IN 6
+MOVB [0x1000], AL ;print the key code
+
+keysdone:
+MOV A, 1
+OUT 2             ;keyboard has been serviced
+POP A
+IRET
+
+main:
+MOV SP, 0x0FFF
+MOV A, 1
+OUT 0            ;set keyboard interrupt mask
+STI              ;enable interrupts
+HLT
