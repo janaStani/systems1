@@ -1,0 +1,113 @@
+; 9.8
+
+JMP main
+JMP isr
+
+vsync:
+  DW 0
+
+; handle graphic card interrupts
+isr:
+	PUSH A
+    ; process graphic card interrupts
+    MOV [vsync], 1
+    
+    ; clear graphic card interrupts IRQEIO = 4
+    MOV A, 4
+    OUT 2
+    
+    POP A
+    IRET
+    
+
+; wait for given number of frames, half second 25 frames
+; parameter frame count register B
+waitframes:
+  countloop:
+  	CMP B, 0
+    JE return
+    
+    ; is tnterrupt received?
+    MOV A, [vsync]
+    CMP A, 0
+    JE countloop
+    
+    MOV [vsync], 0
+  	DEC B 
+    JMP countloop
+return:
+  RET
+
+
+main:
+  MOV SP, 0x0FFF
+  
+  ; enable graphic car iterrupts
+  MOV A, 4
+  OUT 0
+  ; IRQMASK = 4
+  
+  ; enable interrupts globally
+  STI
+  
+  
+  ; enable text mode
+  MOV A, 1    
+  OUT 7
+
+  ; line 7, column 7
+  ; VR | line | 2column |
+  ; address 0x000E
+
+  MOV D, 0x000E ; taring VRAM address
+
+  ; activate the VRAM memory
+  MOV A, D
+  OUT 8
+
+  ;write data
+  ; A | ascii | color code |
+  
+  ; draw the ring
+  MOVB AH, 255
+  MOVB AL, 255
+  OUT 9
+
+
+ringloop:
+  ;clear the ring
+  MOV A, D
+  OUT 8
+  MOV A, 0
+  OUT 9
+  
+  ; udate memory location
+  ADD D, 256
+  
+  ; check line index
+  CMPB DH, 16
+  JB printnormal
+  MOV D, 0x000E
+  
+printnormal:  
+  
+  ; draw the ring
+  ; activate the VRAM memory
+  MOV A, D
+  OUT 8
+
+  ;write data
+  ; A | ascii | color code |
+  ; draw the ring
+  MOVB AH, 255
+  MOVB AL, 255
+  OUT 9
+  
+  
+  ; wait for 25 frames
+  MOV B, 25
+  CALL waitframes
+  
+  
+  
+  JMP ringloop
